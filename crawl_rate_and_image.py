@@ -21,7 +21,7 @@ from selenium.common.exceptions import TimeoutException
 import os
 
 
-df_link = pd.read_csv('link_fix_rep.csv')
+df_link = pd.read_csv('C:\\Users\\ADMIN\\OneDrive\\Documents\\TikiCrawlFix\\crawlTikiandPredict\\links.csv')
 # TSC = TikiScraper_link_item()
 # df_link = TSC.scrape_page_link()
 
@@ -37,7 +37,7 @@ chrome_options.add_argument(f'user-agent={user_agent}')
 data = []
 
 MAX_RETRIES = 5
-number_of_threads = 10
+number_of_threads = 8
 def find_ele(driver , class_name):
     for j in range(MAX_RETRIES):
             try:
@@ -52,7 +52,6 @@ def find_ele(driver , class_name):
                     print(f"Element not found, retrying ({j+1}/{MAX_RETRIES})...")
                     if(j==4):
                         x = 0
-                        break
                     height = driver.execute_script("return document.documentElement.scrollHeight")
                     if class_name == "review-images__heading" :
                         driver.execute_script("window.scrollBy(0, {});".format(int(height * (0.4+j*0.1))))
@@ -62,68 +61,77 @@ lock = threading.Lock()
 visited_links_lock  = threading.Lock()
 visited_links = set()
 # Open the JSON file for reading
+def find_rating(driver , classname):
+    for j in range(MAX_RETRIES+1):
+            try:
+                    height = driver.execute_script("return document.documentElement.scrollHeight")
+                    wait = WebDriverWait(driver, 15)
+                    sleep(4)
+                    element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, classname )))
+                    if element is not None:
+                        x = element.text
+                    else :
+                        x  = 0
+                    break 
+            except Exception:
+                    print(f"Element rating_point_ele or image  not found, retrying ({j+1}/{MAX_RETRIES+1})...")
+                    if(j==MAX_RETRIES):
+                        x = 0
+                   
+                    driver.execute_script("window.scrollBy(0, {});".format(int(height * (0.4+j*0.1))))
+                    sleep(2*j)
+    return x
 try:
-    with open('data_fix.json', 'r') as f:
+    with open('C:\\Users\\ADMIN\\OneDrive\\Documents\\TikiCrawlFix\\crawlTikiandPredict\\data_fix_rate.json', 'r') as f:
         for line in f:
             obj = json.loads(line)
             visited_links.add(obj['link'])
 except json.decoder.JSONDecodeError as e:
     print(f'Lỗi phân tích JSON: {e}')
-try:
-    with open('data_fix_rep.json', 'r') as f:
-        for line in f:
-            obj = json.loads(line)
-            visited_links.add(obj['link'])
-except json.decoder.JSONDecodeError as e:
-    print(f'Lỗi phân tích JSON: {e}')
-
 def get_data_from_link(links , lock , visited_links_lock):
-    driver = webdriver.Chrome("C:\\Users\\Admin\\Downloads\\crawlDataTraining_selenium\\chromedriver.exe" , options=chrome_options)
+    driver = webdriver.Chrome("C:\\Games\\chromedriver.exe" , options=chrome_options)
     for link in links:
        
             if link not in visited_links:
                     driver.get(link)
                     sleep(2)
-                
+                   
+                    height = driver.execute_script("return document.documentElement.scrollHeight")
 
-                    #rep_chat
-                    for j in range(MAX_RETRIES): 
-                        try:
-                            rep_chat_ele = driver.find_element(By.CLASS_NAME, "item.chat") 
-                            if rep_chat_ele is None:
-                                rep_chat_text = "N/A"
-                            else:
-                                try:
-                                    title_div = rep_chat_ele.find_element(By.CLASS_NAME, "title")
-                                    span = title_div.find_element(By.TAG_NAME, "span")
-                                    rep_chat_text = span.get_attribute("textContent")
-                                    break
-                                    # shop_follow_list.append(follow)
-                                except:
-                                    rep_chat_text = "N/A"
-                                    break
-                        except Exception as e:
-                            print(f"Khong lây dc rep_chat , retrying ({j+1}/{MAX_RETRIES})...!")
-                            if(j==4):
-                                    rep_chat_text = "N/A"
-                                    break
-                            sleep(1.5*j)
+                        # # Cuộn trang xuống 1/3 chiều cao của trang
+                    driver.execute_script("window.scrollBy(0, {});".format(int(height * 0.2)))
+                        # html = driver.find_element(By.TAG_NAME, 'html')
+                        # html.send_keys(Keys.END) 
+                    sleep(2)
+                        
+                    driver.execute_script("window.scrollBy(0, {});".format(int(height * 0.25)))
+
+                    sleep(4)
+                        # driver.execute_script("window.scrollBy(0, {});".format(int(height * 0.6)))
+                        # sleep(2)
+                     # driver.execute_script("window.scrollBy(0, {});".format(int(height * 0.7)))
+                    number_image = find_ele(driver , "review-images__heading")
+                        
+                        # rating_point_ele = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "review-rating__point")))
+                    driver.execute_script("window.scrollTo(0, {});".format(int(height * 0.4)))
+                    rating_point = find_rating(driver, "review-rating__point")
                         # x = driver.find_element(By.CLASS_NAME ,  "review-rating__point")
                    
-                
+                    
+
                 
                     # link2.append(a)
                     # new_product = {"link": link, "price": price, 'discount': discount, 'review_count': review_count,
                     #         "count_code": count_code, "quantity_sold": sold_number, "rate_shop": rating, "shop_follow": follow,
                     #         "rating_avarage": rating_point}
-                    data.append({"link": link,  "rep_chat":rep_chat_text })
+                    data.append({"link": link,"number_image":number_image,"rating_avarage": rating_point})
                     
             
                     with visited_links_lock:
                         visited_links.add(link)
         # Ghi dữ liệu vào file JSON
                     with lock:
-                        with open('data_fix_rep.json', 'a') as f:
+                        with open('C:\\Users\\ADMIN\\OneDrive\\Documents\\TikiCrawlFix\\crawlTikiandPredict\\data_fix_rate.json', 'a') as f:
                             json.dump(data[-1], f)
                             f.write('\n')
 

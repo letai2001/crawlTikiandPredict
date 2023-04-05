@@ -38,6 +38,22 @@ data = []
 
 MAX_RETRIES = 5
 number_of_threads = 8
+def find_quantity_sold(driver ,css_name ):
+    for j in range(MAX_RETRIES):            
+            try: 
+                quantity_sold = driver.find_element(By.CSS_SELECTOR, css_name)
+            
+                if quantity_sold is not None:
+                    x = quantity_sold.get_attribute("innerText").split()[2]
+                else :
+                    x  = 0
+                break  # thoát vòng lặp nếu đã xác định được giá trị của biến
+            except Exception as e:
+                print(f"khong thay phan tu quantitysold , retrying ({j+1}/{MAX_RETRIES})...")
+                if(j==MAX_RETRIES-1):
+                    x = 0
+                sleep(1)
+    return x
 def find_ele(driver , class_name):
     for j in range(MAX_RETRIES):
             try:
@@ -57,11 +73,10 @@ def find_ele(driver , class_name):
                         driver.execute_script("window.scrollBy(0, {});".format(int(height * (0.4+j*0.1))))
                     sleep(1.5*j)
     return x
-lock = threading.Lock()
-visited_links_lock  = threading.Lock()
-visited_links = set()
+
+
 # Open the JSON file for reading
-def find_rating(driver , classname):
+def find_rating(driver , classname):    
     for j in range(MAX_RETRIES+1):
             try:
                     height = driver.execute_script("return document.documentElement.scrollHeight")
@@ -81,6 +96,9 @@ def find_rating(driver , classname):
                     driver.execute_script("window.scrollBy(0, {});".format(int(height * (0.4+j*0.1))))
                     sleep(2*j)
     return x
+lock = threading.Lock()
+visited_links_lock  = threading.Lock()
+visited_links = set()
 try:
     with open('data_fix.json', 'r') as f:
         for line in f:
@@ -102,18 +120,7 @@ def get_data_from_link(links , lock , visited_links_lock):
                     count_code = find_ele(driver , "coupon__text")
                 # count_code = int(count_code.split(" ")[0])
                 
-                
-                    sold_number = 0
-                    for j in range(MAX_RETRIES):            
-                        try: 
-                            quantity_sold = driver.find_element(By.CSS_SELECTOR, 'div[data-view-id="pdp_quantity_sold"].styles__StyledQuantitySold-sc-1u1gph7-2.exWbxD')
-                        
-                            if quantity_sold is not None:
-                                sold_number = quantity_sold.get_attribute("innerText").split()[2]
-                                break  # thoát vòng lặp nếu đã xác định được giá trị của biến
-                        except Exception as e:
-                            print(f"khong thay phan tu quantitysold , retrying ({j+1}/{MAX_RETRIES})...")
-                            sleep(1)
+                    sold_number = find_quantity_sold(driver, 'div[data-view-id="pdp_quantity_sold"].styles__StyledQuantitySold-sc-1u1gph7-2.exWbxD' )
 
 
                     #rate_shop
